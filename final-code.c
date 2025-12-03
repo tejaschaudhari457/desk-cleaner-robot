@@ -3,7 +3,8 @@
 //SMARS Demo 4 with ultrasonic sensor
 //This sketch makes the robot avoid obstacles 
 //you'll need an Adafruit Motor shield V1 https://goo.gl/7MvZeo  and a ultrasonic sensor
-
+//Very simple: “If anything is close or edge detected → back + turn left, else go forward.”
+//Uses analog IR as ground/edge detection, single reaction.
 // Edits made by Jared Dilley
 
 AF_DCMotor R_motor(2);           // defines Right motor connector
