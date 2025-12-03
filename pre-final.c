@@ -1,3 +1,6 @@
+//Very simple: “If anything is close or edge detected → back + turn left, else go forward.”
+//Uses analog IR as ground/edge detection, single reaction.
+
 // ---------------- Motor Pins (PWM) ----------------
 int IN1 = 5;   // Right motor
 int IN2 = 6;
