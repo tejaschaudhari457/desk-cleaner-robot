@@ -1,10 +1,10 @@
-// Motor 1 pins
-int IN1 = 5;
-int IN2 = 6;
+// Motor 1 pins  right side
+int IN1 = 10;
+int IN2 = 11;
 
-// Motor 2 pins
-int IN3 = 3;
-int IN4 = 4;
+// Motor 2 pins  left side 
+int IN3 = 12;
+int IN4 = 13;
 
 void setup() {
   pinMode(IN1, OUTPUT);
