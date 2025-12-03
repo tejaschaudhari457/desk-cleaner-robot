@@ -1,3 +1,5 @@
+//More intelligent: “Ultrasonic close → back. IR left/right → decide to turn left/right/stop. Else → move forward with PWM speeds.”
+//Uses digital IR as obstacle detectors with separate behavior per side and priority handling.
 // ---------------- Motor Pins (PWM) ----------------
 int IN1 = 5;   // Right motor
 int IN2 = 6;
