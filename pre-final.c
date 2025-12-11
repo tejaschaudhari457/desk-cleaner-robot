@@ -1,29 +1,34 @@
-//Very simple: “If anything is close or edge detected → back + turn left, else go forward.”
-//Uses analog IR as ground/edge detection, single reaction.
+// ---------------- MOTOR PINS (L293D) ----------------
+int IN1 = 5;     // Right Motor Forward (logical)
+int IN2 = 6;     // Right Motor Backward (logical)
+int IN3 = 9;     // Left Motor Forward  (logical)
+int IN4 = 10;    // Left Motor Backward (logical)
 
-// ---------------- Motor Pins (PWM) ----------------
-int IN1 = 5;   // Right motor
-int IN2 = 6;
-int IN3 = 9;   // Left motor
-int IN4 = 10;
-
-// ---------------- IR Sensor Pins ------------------
-int irPinRight = 8;   // Digital IR Right
-int irPinLeft  = 7;   // Digital IR Left
-
-// ---------------- Ultrasonic Pins -----------------
+// ---------------- ULTRASONIC PINS ----------------
 #define TRIG 3
 #define ECHO 4
 
-// ---------- Speed Settings ----------
-int forwardSpeed = 180;
-int backSpeed    = 180;
-int turnSpeed    = 160;
+// ---------------- IR SENSOR PINS ----------------
+// Digital pins you previously used (kept for reference)
+int irPinRight = 8;  // (digital) Right IR
+int irPinLeft  = 2;  // (digital) Left IR
 
-// ---------- Distance Threshold (cm) ----------
-float obstacleDist = 5.0;   // Same style as Code 1 (very close)
+// Analog pins for analog IR sensors (used for threshold > 500)
+const int irAnalogRightPin = A0;
+const int irAnalogLeftPin  = A1;
 
-// --------------------------------------------------
+// SOFTWARE INVERSION (use when wiring is physically reversed)
+bool invertMotors = true;
+
+// Emergency timing (milliseconds) — tune these as needed
+const unsigned long STOP_MS    = 150;  // short stop before reversing
+const unsigned long REVERSE_MS = 600;  // reverse duration
+const unsigned long TURN_MS    = 450;  // left-turn duration
+
+// Thresholds
+const long DISTANCE_EMERGENCY_CM = 7;   // ultrasonic threshold (cm)
+const int IR_EMERGENCY_THRESHOLD  = 500; // analogRead threshold (0..1023)
+
 void setup() {
   Serial.begin(9600);
 
@@ -32,126 +37,160 @@ void setup() {
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
 
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+
   pinMode(irPinRight, INPUT);
   pinMode(irPinLeft, INPUT);
 
-  pinMode(TRIG, OUTPUT);
-  pinMode(ECHO, INPUT);
+  // analog pins do not need pinMode on AVR/Arduino; left for clarity
+  // pinMode(irAnalogRightPin, INPUT);
+  // pinMode(irAnalogLeftPin, INPUT);
+
+  // ensure motors stopped at start
+  stopMotors();
 }
 
-// --------------------------------------------------
-void loop() {
-
-  // --------- Read IR Sensors (Digital) -----------
-  int rightIR = digitalRead(irPinRight);  // 0 = obstacle, 1 = clear
-  int leftIR  = digitalRead(irPinLeft);   // 0 = obstacle, 1 = clear
-
-  // --------- Read Ultrasonic Distance -----------
-  float distance = getDistanceCm();
-
-  Serial.print("Right IR: ");
-  Serial.print(rightIR);
-  Serial.print(" | Left IR: ");
-  Serial.print(leftIR);
-  Serial.print(" | Distance: ");
-  Serial.print(distance);
-  Serial.println(" cm");
-
-  // -------------------------------------------------
-  //           MAIN LOGIC (SAME STYLE AS CODE 1)
-  // If:
-  //   - Distance < 5 cm (very close obstacle), OR
-  //   - Any IR triggered (0 = obstacle / edge)
-  // Then:
-  //   Stop -> Backward -> Turn Left
-  // Else:
-  //   Forward
-  // -------------------------------------------------
-
-  if ( (distance > 0 && distance < obstacleDist) ||
-       (rightIR == 0) ||
-       (leftIR == 0) ) {
-
-    // Stop
-    stopMotors();
-    delay(200);
-
-    // Go Backwards
-    moveBackward();
-    delay(1000);
-
-    // Turn Left (Right motor forward, Left motor backward)
-    turnLeft();
-    delay(1000);
-
-    // Stop after manoeuvre (optional)
-    stopMotors();
-  }
-  else {
-    // Forward
-    moveForward();
-  }
-
-  delay(50);
-}
-
-// ================= Helper Functions =================
-
-// Measure distance in cm (like mdistance() in Code 1, but fixed)
-float getDistanceCm() {
+// Read ultrasonic distance in cm (returns -1 on timeout/no echo)
+long readUltrasonic() {
   digitalWrite(TRIG, LOW);
   delayMicroseconds(2);
-
   digitalWrite(TRIG, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG, LOW);
 
-  long duration = pulseIn(ECHO, HIGH, 30000); // timeout 30ms
-  if (duration == 0) {
-    return -1;  // no echo
-  }
-
-  float distance = duration * 0.034 / 2.0; // in cm
+  long duration = pulseIn(ECHO, HIGH, 30000); // 30 ms timeout
+  if (duration == 0) return -1;
+  long distance = duration * 0.034 / 2; // cm
   return distance;
 }
 
-// -------- Motor: Forward --------
-void moveForward() {
-  // Right motor forward
-  analogWrite(IN1, forwardSpeed);
+// Logical motor commands (based on IN pins)
+void logicalForward() {
+  digitalWrite(IN1, HIGH);
   digitalWrite(IN2, LOW);
-
-  // Left motor forward
-  analogWrite(IN3, forwardSpeed);
+  digitalWrite(IN3, HIGH);
   digitalWrite(IN4, LOW);
 }
 
-// -------- Motor: Backward --------
-void moveBackward() {
-  // Right motor backward
+void logicalBackward() {
   digitalWrite(IN1, LOW);
-  analogWrite(IN2, backSpeed);
-
-  // Left motor backward
+  digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
-  analogWrite(IN4, backSpeed);
+  digitalWrite(IN4, HIGH);
 }
 
-// -------- Motor: Stop --------
-void stopMotors() {
-  analogWrite(IN1, 0);
-  analogWrite(IN2, 0);
-  analogWrite(IN3, 0);
-  analogWrite(IN4, 0);
-}
-
-// -------- Motor: Turn Left (like Code 1: R FWD, L BWD) --------
-void turnLeft() {
-  // Right motor forward
-  analogWrite(IN1, turnSpeed);
+// Turn left: Right motor forward, Left motor backward
+void logicalTurnLeft() {
+  digitalWrite(IN1, HIGH);  // Right forward
   digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);   // Left backward
+  digitalWrite(IN4, HIGH);
+}
 
-  // Left motor backward
+// User-facing motor commands (respect invertMotors)
+void goForward() {
+  if (invertMotors) logicalBackward();
+  else logicalForward();
+}
+
+void goBackward() {
+  if (invertMotors) logicalForward();
+  else logicalBackward();
+}
+
+void turnLeft() {
+  if (invertMotors) {
+    // invert logicalTurnLeft: swap forward/backward roles
+    // original logicalTurnLeft = Right forward, Left backward
+    // inverted: Right backward, Left forward
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, HIGH);
+    digitalWrite(IN3, HIGH);
+    digitalWrite(IN4, LOW);
+  } else {
+    logicalTurnLeft();
+  }
+}
+
+void stopMotors() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW);
-  analogWrite(IN4, turnSpeed);
+  digitalWrite(IN4, LOW);
+}
+
+// Emergency maneuver: stop -> reverse -> turn left
+void emergencyManeuver() {
+  Serial.println("--- EMERGENCY START ---");
+  // 1) Stop briefly
+  stopMotors();
+  delay(STOP_MS);
+
+  // 2) Reverse both motors (move backward)
+  goBackward();
+  Serial.println("Reversing...");
+  delay(REVERSE_MS);
+
+  // 3) Short stop before turning (optional)
+  stopMotors();
+  delay(100);
+
+  // 4) Turn left (Right motor forward, Left motor backward)
+  turnLeft();
+  Serial.println("Turning left...");
+  delay(TURN_MS);
+
+  // 5) Resume forward after maneuver
+  goForward();
+  Serial.println("--- EMERGENCY END, RESUME FORWARD ---");
+}
+
+void loop() {
+  // Read sensors
+  int rightIR_digital = digitalRead(irPinRight);
+  int leftIR_digital  = digitalRead(irPinLeft);
+
+  int rightIR_analog = analogRead(irAnalogRightPin);
+  int leftIR_analog  = analogRead(irAnalogLeftPin);
+
+  long distance = readUltrasonic();
+
+  // Print sensor values
+  Serial.print("D_R:"); Serial.print(rightIR_digital);
+  Serial.print(" D_L:"); Serial.print(leftIR_digital);
+  Serial.print(" | A_R:"); Serial.print(rightIR_analog);
+  Serial.print(" A_L:"); Serial.print(leftIR_analog);
+  Serial.print(" | Ultrasound: ");
+  if (distance < 0) Serial.print("no echo");
+  else {
+    Serial.print(distance);
+    Serial.print("cm");
+  }
+  Serial.println();
+
+  // Evaluate emergency condition:
+  // (distance <= 7 cm) OR (right analog IR > 500) OR (left analog IR > 500)
+  bool distanceEmergency = (distance > 0 && distance <= DISTANCE_EMERGENCY_CM);
+  bool rightIREmergency  = (rightIR_analog > IR_EMERGENCY_THRESHOLD);
+  bool leftIREmergency   = (leftIR_analog  > IR_EMERGENCY_THRESHOLD);
+
+  if (distanceEmergency || rightIREmergency || leftIREmergency) {
+    Serial.print("EMERGENCY: ");
+    if (distanceEmergency) Serial.print("Distance ");
+    if (rightIREmergency) { Serial.print("RightIR "); }
+    if (leftIREmergency)  { Serial.print("LeftIR "); }
+    Serial.println();
+
+    // perform the emergency routine
+    emergencyManeuver();
+  }
+  else {
+    // Safe path: move forward normally
+    goForward();
+    Serial.println("Safe -> FORWARD");
+  }
+
+  // small loop delay
+  delay(120);
 }
