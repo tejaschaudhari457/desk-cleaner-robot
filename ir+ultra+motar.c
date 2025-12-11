@@ -1,24 +1,21 @@
-//More intelligent: “Ultrasonic close → back. IR left/right → decide to turn left/right/stop. Else → move forward with PWM speeds.”
-//Uses digital IR as obstacle detectors with separate behavior per side and priority handling.
-// ---------------- Motor Pins (PWM) ----------------
-int IN1 = 5;   // Right motor
-int IN2 = 6;
-int IN3 = 9;   // Left motor
-int IN4 = 10;
+// ---------------- MOTOR PINS (L293D) ----------------
+int IN1 = 5;     // Right Motor Forward
+int IN2 = 6;     // Right Motor Backward
+int IN3 = 9;     // Left Motor Forward
+int IN4 = 10;    // Left Motor Backward
 
-// ---------------- IR Sensor Pins ------------------
-int irPinRight = 8;
-int irPinLeft  = 7;
-
-// ---------------- Ultrasonic Pins -----------------
+// ---------------- ULTRASONIC PINS ----------------
 #define TRIG 3
 #define ECHO 4
 
-// ---------- Speed Settings ----------
-int forwardSpeed = 180;
-int turnSpeed    = 150;
-int backSpeed    = 180;
+// ---------------- IR SENSOR PINS ----------------
+int irPinRight = 8;  // Right IR (0 = surface, 1 = edge)
+int irPinLeft  = 2;  // Left IR (0 = surface, 1 = edge)
 
+
+// =====================================================
+// SETUP
+// =====================================================
 void setup() {
   Serial.begin(9600);
 
@@ -27,118 +24,81 @@ void setup() {
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
 
-  pinMode(irPinRight, INPUT);
-  pinMode(irPinLeft, INPUT);
-
   pinMode(TRIG, OUTPUT);
   pinMode(ECHO, INPUT);
+
+  pinMode(irPinRight, INPUT);
+  pinMode(irPinLeft, INPUT);
 }
 
-void loop() {
 
-  // ---------------- Read IR Sensors ----------------
-  int rightIR = digitalRead(irPinRight);
-  int leftIR  = digitalRead(irPinLeft);
-
-  // ---------------- Read Ultrasonic ----------------
+// =====================================================
+// READ ULTRASONIC FUNCTION
+// =====================================================
+long readUltrasonic() {
   digitalWrite(TRIG, LOW);
   delayMicroseconds(2);
-
   digitalWrite(TRIG, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG, LOW);
 
   long duration = pulseIn(ECHO, HIGH);
-  float distance = duration * 0.034 / 2;   // cm
+  long distance = duration * 0.034 / 2; // in cm
+  return distance;
+}
 
+
+// =====================================================
+// SIMPLE MOTOR TEST (forward → reverse → stop)
+// =====================================================
+void motorTest() {
+
+  // Forward
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  delay(1500);
+
+  // Reverse
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+  delay(1500);
+
+  // Stop
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+  delay(1500);
+}
+
+
+// =====================================================
+// MAIN LOOP
+// =====================================================
+void loop() {
+
+  // ---- Read Sensors ----
+  int rightIR = digitalRead(irPinRight);
+  int leftIR  = digitalRead(irPinLeft);
+  long distance = readUltrasonic();
+
+  // ---- Print Values to Serial ----
   Serial.print("Right IR: ");
   Serial.print(rightIR);
+
   Serial.print(" | Left IR: ");
   Serial.print(leftIR);
-  Serial.print(" | Distance: ");
+
+  Serial.print(" | Ultrasonic: ");
   Serial.print(distance);
   Serial.println(" cm");
 
-  // -------------------------------------------------
-  //                   MAIN LOGIC
-  // -------------------------------------------------
+  // ---- Run Motor Test (for now) ----
+  motorTest();
 
-  // 1️⃣ ULTRASONIC HIGH PRIORITY → BACKWARD
-  if (distance < 15 && distance > 0) {
-    moveBackwardSmooth();
-    Serial.println("Ultrasonic: Close Object → BACKWARD");
-  }
-
-  // 2️⃣ BOTH IR DETECT OBSTACLE → STOP
-  else if (rightIR == 0 && leftIR == 0) {
-    stopMotors();
-    Serial.println("Both IR Detect → STOP");
-  }
-
-  // 3️⃣ RIGHT IR DETECT → TURN LEFT
-  else if (rightIR == 0 && leftIR == 1) {
-    turnLeftSmooth();
-    Serial.println("Right IR Detect → TURN LEFT");
-  }
-
-  // 4️⃣ LEFT IR DETECT → TURN RIGHT
-  else if (rightIR == 1 && leftIR == 0) {
-    turnRightSmooth();
-    Serial.println("Left IR Detect → TURN RIGHT");
-  }
-
-  // 5️⃣ NO OBSTACLE → FORWARD
-  else {
-    moveForwardSmooth();
-    Serial.println("Clear → FORWARD");
-  }
-
-  Serial.println("--------------------------------");
-  delay(100);
-}
-
-// ---------------- Motor Functions ----------------
-
-// Forward
-void moveForwardSmooth() {
-  analogWrite(IN1, forwardSpeed);
-  digitalWrite(IN2, LOW);
-
-  analogWrite(IN3, forwardSpeed);
-  digitalWrite(IN4, LOW);
-}
-
-// Backward
-void moveBackwardSmooth() {
-  digitalWrite(IN1, LOW);
-  analogWrite(IN2, backSpeed);
-
-  digitalWrite(IN3, LOW);
-  analogWrite(IN4, backSpeed);
-}
-
-// Stop
-void stopMotors() {
-  analogWrite(IN1, 0);
-  analogWrite(IN2, 0);
-  analogWrite(IN3, 0);
-  analogWrite(IN4, 0);
-}
-
-// Turn Left
-void turnLeftSmooth() {
-  analogWrite(IN1, 0);
-  digitalWrite(IN2, LOW);
-
-  analogWrite(IN3, turnSpeed);
-  digitalWrite(IN4, LOW);
-}
-
-// Turn Right
-void turnRightSmooth() {
-  analogWrite(IN1, turnSpeed);
-  digitalWrite(IN2, LOW);
-
-  analogWrite(IN3, 0);
-  digitalWrite(IN4, LOW);
+  delay(200);
 }
