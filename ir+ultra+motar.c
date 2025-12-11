@@ -1,8 +1,8 @@
 // ---------------- MOTOR PINS (L293D) ----------------
-int IN1 = 5;     // Right Motor Forward
-int IN2 = 6;     // Right Motor Backward
-int IN3 = 9;     // Left Motor Forward
-int IN4 = 10;    // Left Motor Backward
+int IN1 = 5;     // Right Motor Forward (logical)
+int IN2 = 6;     // Right Motor Backward (logical)
+int IN3 = 9;     // Left Motor Forward  (logical)
+int IN4 = 10;    // Left Motor Backward (logical)
 
 // ---------------- ULTRASONIC PINS ----------------
 #define TRIG 3
@@ -10,12 +10,11 @@ int IN4 = 10;    // Left Motor Backward
 
 // ---------------- IR SENSOR PINS ----------------
 int irPinRight = 8;  // Right IR (0 = surface, 1 = edge)
-int irPinLeft  = 2;  // Left IR (0 = surface, 1 = edge)
+int irPinLeft  = 2;  // Left IR  (0 = surface, 1 = edge)
 
+// SOFTWARE INVERSION (use when wiring is physically reversed)
+bool invertMotors = true;  
 
-// =====================================================
-// SETUP
-// =====================================================
 void setup() {
   Serial.begin(9600);
 
@@ -31,10 +30,7 @@ void setup() {
   pinMode(irPinLeft, INPUT);
 }
 
-
-// =====================================================
-// READ ULTRASONIC FUNCTION
-// =====================================================
+// Read ultrasonic distance in cm (returns -1 on timeout/no echo)
 long readUltrasonic() {
   digitalWrite(TRIG, LOW);
   delayMicroseconds(2);
@@ -42,63 +38,70 @@ long readUltrasonic() {
   delayMicroseconds(10);
   digitalWrite(TRIG, LOW);
 
-  long duration = pulseIn(ECHO, HIGH);
-  long distance = duration * 0.034 / 2; // in cm
+  long duration = pulseIn(ECHO, HIGH, 30000); // 30 ms timeout
+  if (duration == 0) return -1;
+  long distance = duration * 0.034 / 2; // cm
   return distance;
 }
 
-
-// =====================================================
-// SIMPLE MOTOR TEST (forward → reverse → stop)
-// =====================================================
-void motorTest() {
-
-  // Forward
+// Logical motor commands (based on IN pins)
+void logicalForward() {
   digitalWrite(IN1, HIGH);
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH);
   digitalWrite(IN4, LOW);
-  delay(1500);
+}
 
-  // Reverse
+void logicalBackward() {
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, HIGH);
-  delay(1500);
+}
 
-  // Stop
+// User-facing motor commands (respect invertMotors)
+void goForward() {
+  if (invertMotors) logicalBackward();
+  else logicalForward();
+}
+
+void goBackward() {
+  if (invertMotors) logicalForward();
+  else logicalBackward();
+}
+
+void stopMotors() {
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, LOW);
-  delay(1500);
 }
 
-
-// =====================================================
-// MAIN LOOP
-// =====================================================
 void loop() {
-
-  // ---- Read Sensors ----
   int rightIR = digitalRead(irPinRight);
   int leftIR  = digitalRead(irPinLeft);
   long distance = readUltrasonic();
 
-  // ---- Print Values to Serial ----
   Serial.print("Right IR: ");
   Serial.print(rightIR);
-
   Serial.print(" | Left IR: ");
   Serial.print(leftIR);
-
   Serial.print(" | Ultrasonic: ");
-  Serial.print(distance);
-  Serial.println(" cm");
+  if (distance < 0) Serial.print("no echo");
+  else {
+    Serial.print(distance);
+    Serial.print(" cm");
+  }
+  Serial.println();
 
-  // ---- Run Motor Test (for now) ----
-  motorTest();
+  // Obstacle logic: distance <= 7 cm -> go backward, else forward
+  if (distance > 0 && distance <= 7) {
+    goBackward();
+    Serial.println("Obstacle <= 7cm -> BACKWARD");
+  } else {
+    goForward();
+    Serial.println("Clear -> FORWARD");
+  }
 
-  delay(200);
+  delay(100);
 }
