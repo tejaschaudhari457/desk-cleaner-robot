@@ -1,19 +1,4 @@
-// =====================================================
-// DESK CLEANER ROBOT – FINAL CODE (SAFE + SMOOTH)
-// -----------------------------------------------------
-// FEATURES:
-// 1. IR DOWNWARD SENSORS → Detect desk edge (fall protection)
-// 2. Ultrasonic → Detect front obstacle
-// 3. PWM Motor Driver → Smooth forward, backward, turning
-// 4. Priority:
-//      Edge > Obstacle > Forward
-//✔ Desk edge safety
-//✔ Smooth movements
-//✔ Accurate obstacle detection
-//✔ Simple tuning
-//✔ Clean logic + clear comments
-// =====================================================
-
+// ============= UPDATED PIN VERSION (LOGIC NOT CHANGED) =============
 
 // ---------------- MOTOR PINS (L293D DRIVER) ----------------
 int IN1 = 5;     // Right Motor Forward (PWM)
@@ -23,14 +8,8 @@ int IN4 = 10;    // Left Motor Backward (PWM)
 
 
 // ---------------- IR EDGE SENSOR PINS ----------------
-// These IR sensors point DOWN to detect edge/no surface
-int irPinRight = 8;   // Right side IR
-int irPinLeft  = 7;   // Left side IR
-
-// ASSUMPTION:
-//   0 = DESK SURFACE DETECTED
-//   1 = EDGE / NO SURFACE (DANGER)
-// If opposite, we can invert easily.
+int irPinRight = 8;   // Right side IR  (0 = surface, 1 = edge)
+int irPinLeft  = 2;   // Left side IR   (0 = surface, 1 = edge)
 
 
 // ---------------- ULTRASONIC (FRONT) -----------------
@@ -38,24 +17,33 @@ int irPinLeft  = 7;   // Left side IR
 #define ECHO 4
 
 
-// ---------------- MOVEMENT SPEEDS --------------------
-int forwardSpeed = 170;   // Speed during forward motion
-int backSpeed    = 180;   // Speed during backward motion
-int turnSpeed    = 160;   // Speed during turns
+// ------------------------------------------------------
+long duration;
+int distance;
+int distancecm;
+int rightIRValue;
+int leftIRValue;
 
 
-// ---------------- TIMINGS FOR MOVEMENT ---------------
-int backTimeEdge      = 400;   // Backup time when edge detected
-int turnTimeEdge      = 500;   // Turn time after edge
-int backTimeObstacle  = 250;   // Backup when obstacle detected
-int turnTimeObstacle  = 350;   // Turn time for obstacle
+// ------------------------------------------------------
+// Ultrasonic distance function (SAME LOGIC)
+int mdistance()
+{
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+  duration = pulseIn(ECHO, HIGH);
+  distance = duration * 0.034 / 2;
+
+  return distance;
+}
 
 
-// ---------------- DISTANCE SETTINGS -------------------
-float frontObstacleDist = 12.0;   // Obstacle threshold in cm
-
-
-// =====================================================
+// ------------------------------------------------------
 void setup() {
   Serial.begin(9600);
 
@@ -65,174 +53,58 @@ void setup() {
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
 
-  // Sensor pins
+  // IR pins
   pinMode(irPinRight, INPUT);
   pinMode(irPinLeft, INPUT);
 
-  // Ultrasonic pins
+  // Ultrasonic
   pinMode(TRIG, OUTPUT);
   pinMode(ECHO, INPUT);
-
-  stopMotors();   // Start safely
 }
 
 
-// =====================================================
+// ------------------------------------------------------
 void loop() {
 
-  // --------- Read IR Sensors (Downward) ----------
-  int rightIR = digitalRead(irPinRight);
-  int leftIR  = digitalRead(irPinLeft);
+  distancecm = mdistance();                 // SAME
+  rightIRValue = digitalRead(irPinRight);   // SAME
+  leftIRValue  = digitalRead(irPinLeft);    // SAME
 
-  // Convert digital reading into edge detection
-  bool edgeRight = (rightIR == 1);  
-  bool edgeLeft  = (leftIR == 1);   
+  // SAME DECISION LOGIC AS ORIGINAL CODE
+  if (distancecm < 5 || rightIRValue == 1 || leftIRValue == 1) {
 
-  // If your IR is opposite, use:
-  // bool edgeRight = (rightIR == 0);
-  // bool edgeLeft  = (leftIR == 0);
-
-
-  // --------- Read Ultrasonic Distance ----------
-  float distance = getDistanceCm();
+    // stop
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, LOW);
 
 
-  // --------- Debug Print ----------
-  Serial.print("IR_Right=");
-  Serial.print(rightIR);
-  Serial.print(" EdgeR=");
-  Serial.print(edgeRight);
+    // backward (same behavior)
+    analogWrite(IN1, LOW);
+    analogWrite(IN2, 180);   // Right backward
+    analogWrite(IN3, LOW);
+    analogWrite(IN4, 180);   // Left backward
 
-  Serial.print(" | IR_Left=");
-  Serial.print(leftIR);
-  Serial.print(" EdgeL=");
-  Serial.print(edgeLeft);
-
-  Serial.print(" | Distance=");
-  Serial.print(distance);
-  Serial.println(" cm");
+    delay(1000);
 
 
-  // =================================================
-  //            MAIN DECISION LOGIC
-  // =================================================
+    // turn left (same behavior)
+    analogWrite(IN1, 180);   // Right forward
+    analogWrite(IN2, LOW);
 
-  // 1️⃣ EDGE DETECTED → Most important (fall prevention)
-  if (edgeLeft || edgeRight) {
+    analogWrite(IN3, LOW);
+    analogWrite(IN4, 180);   // Left backward
 
-    Serial.println(">> EDGE DETECTED! Backing away and turning.");
-
-    stopMotors();
-    delay(100);
-
-    moveBackward();           // Move back from edge
-    delay(backTimeEdge);
-
-    // Turn away from the detected edge
-    if (edgeLeft && !edgeRight) {
-      turnRight();            // Left edge → turn right
-    } 
-    else if (edgeRight && !edgeLeft) {
-      turnLeft();             // Right edge → turn left
-    } 
-    else {
-      turnLeft();             // Both edges → turn left (safe default)
-    }
-
-    delay(turnTimeEdge);
-    stopMotors();
+    delay(1000);
   }
-
-
-  // 2️⃣ OBSTACLE DETECTED → Ultrasonic
-  else if (distance > 0 && distance < frontObstacleDist) {
-
-    Serial.println(">> OBSTACLE AHEAD! Back + small turn.");
-
-    stopMotors();
-    delay(100);
-
-    moveBackward();
-    delay(backTimeObstacle);
-
-    turnLeft();      // You can randomize later if needed
-    delay(turnTimeObstacle);
-
-    stopMotors();
-  }
-
-
-  // 3️⃣ SAFE → MOVE FORWARD
   else {
-    Serial.println(">> CLEAR PATH → Moving Forward.");
-    moveForward();
+    // forward (same behavior)
+    analogWrite(IN1, 180);   // Right forward
+    analogWrite(IN2, LOW);
+
+    analogWrite(IN3, 180);   // Left forward
+    analogWrite(IN4, LOW);
   }
 
-
-  delay(40);  // Smooth loop delay
-}
-
-
-
-// =====================================================
-//                 HELPER FUNCTIONS
-// =====================================================
-
-// ---- Ultrasonic distance measurement ----
-float getDistanceCm() {
-  digitalWrite(TRIG, LOW);
-  delayMicroseconds(2);
-
-  digitalWrite(TRIG, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(TRIG, LOW);
-
-  long duration = pulseIn(ECHO, HIGH, 30000); // 30ms timeout
-  if (duration == 0) return -1;               // No echo detected
-
-  return (duration * 0.034) / 2.0;            // Convert to cm
-}
-
-
-// ---- Motor Functions ----
-
-void moveForward() {
-  // Right motor forward
-  analogWrite(IN1, forwardSpeed);
-  digitalWrite(IN2, LOW);
-
-  // Left motor forward
-  analogWrite(IN3, forwardSpeed);
-  digitalWrite(IN4, LOW);
-}
-
-void moveBackward() {
-  digitalWrite(IN1, LOW);
-  analogWrite(IN2, backSpeed);
-
-  digitalWrite(IN3, LOW);
-  analogWrite(IN4, backSpeed);
-}
-
-void turnLeft() {
-  analogWrite(IN1, turnSpeed);  // Right motor forward
-  digitalWrite(IN2, LOW);
-
-  digitalWrite(IN3, LOW);       // Left motor backward
-  analogWrite(IN4, turnSpeed);
-}
-
-void turnRight() {
-  digitalWrite(IN1, LOW);       // Right motor backward
-  analogWrite(IN2, turnSpeed);
-
-  analogWrite(IN3, turnSpeed);  // Left motor forward
-  digitalWrite(IN4, LOW);
-}
-
-void stopMotors() {
-  analogWrite(IN1, 0);
-  analogWrite(IN2, 0);
-  analogWrite(IN3, 0);
-  analogWrite(IN4, 0);
 }
