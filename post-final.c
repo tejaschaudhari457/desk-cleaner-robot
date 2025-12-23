@@ -29,9 +29,9 @@ const long DISTANCE_EMERGENCY_CM = 5;
 const int IR_EMERGENCY_THRESHOLD  = 500; // analogRead threshold (0..1023)
 
 // ----- Motor speeds (0..255) - tweak to reduce/increase RPM -----
-const int MOTOR_SPEED      = 60; // forward cruising speed (lower -> slower RPM)
-const int REVERSE_SPEED    = 60; // reverse speed during emergency
-const int TURN_SPEED       = 60; // speed used while turning (one motor forward, one back)
+const int MOTOR_SPEED      = 70; // forward cruising speed (lower -> slower RPM)
+const int REVERSE_SPEED    = 70; // reverse speed during emergency
+const int TURN_SPEED       = 70; // speed used while turning (one motor forward, one back)
 
 // Helper to constrain speeds safely (optional)
 int clippedSpeed(int s){
