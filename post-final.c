@@ -1,8 +1,8 @@
 // ---------------- MOTOR PINS (L293D) ----------------
-const int IN1 = 5;     // Right Motor Forward (PWM-capable)
-const int IN2 = 6;     // Right Motor Backward (PWM-capable)
-const int IN3 = 9;     // Left Motor Forward  (PWM-capable)
-const int IN4 = 10;    // Left Motor Backward (PWM-capable)
+const int IN1 = 5;     // M1 Right Motor Forward (PWM-capable)
+const int IN2 = 6;     // M1 Right Motor Backward (PWM-capable)
+const int IN3 = 9;     // M2 Left Motor Forward  (PWM-capable)
+const int IN4 = 10;    // M2 Left Motor Backward (PWM-capable)
 
 // ---------------- ULTRASONIC PINS ----------------
 #define TRIG 3
