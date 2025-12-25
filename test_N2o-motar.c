@@ -1,42 +1,56 @@
-// Motor 1 pins  right side
-int IN1 = 10;
-int IN2 = 11;
+// ===== MOTOR TEST CODE (FORWARD & BACKWARD ONLY) =====
 
-// Motor 2 pins  left side 
-int IN3 = 12;
-int IN4 = 13;
+// Motor pins
+const int IN1 = 5;   // Right Motor Forward
+const int IN2 = 6;   // Right Motor Backward
+const int IN3 = 9;   // Left Motor Forward
+const int IN4 = 10;  // Left Motor Backward
+
+const int SPEED = 120;   // Test speed (0–255)
 
 void setup() {
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
+
+  stopMotors();
 }
 
 void loop() {
+  // FORWARD
+  forward();
+  delay(3000);
 
-  // ----- Motor 1 Forward -----
-  digitalWrite(IN1, HIGH);
-  digitalWrite(IN2, LOW);
+  stopMotors();
+  delay(1500);
 
-  // ----- Motor 2 Forward -----
-  digitalWrite(IN3, HIGH);
-  digitalWrite(IN4, LOW);
+  // BACKWARD
+  backward();
+  delay(3000);
+
+  stopMotors();
   delay(2000);
+}
 
-  // ----- Motor 1 Reverse -----
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, HIGH);
+// -------- Motor Control --------
+void forward() {
+  analogWrite(IN1, SPEED);
+  analogWrite(IN2, 0);
+  analogWrite(IN3, SPEED);
+  analogWrite(IN4, 0);
+}
 
-  // ----- Motor 2 Reverse -----
-  digitalWrite(IN3, LOW);
-  digitalWrite(IN4, HIGH);
-  delay(2000);
+void backward() {
+  analogWrite(IN1, 0);
+  analogWrite(IN2, SPEED);
+  analogWrite(IN3, 0);
+  analogWrite(IN4, SPEED);
+}
 
-  // ----- Stop both motors -----
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, LOW);
-  digitalWrite(IN3, LOW);
-  digitalWrite(IN4, LOW);
-  delay(2000);
+void stopMotors() {
+  analogWrite(IN1, 0);
+  analogWrite(IN2, 0);
+  analogWrite(IN3, 0);
+  analogWrite(IN4, 0);
 }
