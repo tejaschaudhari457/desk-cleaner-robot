@@ -13,8 +13,8 @@ int irPinRight = 8;
 int irPinLeft  = 2;  
 
 // Analog IR
-const int irAnalogRightPin = A0;
-const int irAnalogLeftPin  = A1;
+const int irAnalogRightPin = A4;
+const int irAnalogLeftPin  = A6;
 
 // SOFTWARE INVERSION
 bool invertMotors = true;
@@ -30,16 +30,16 @@ const int IR_EMERGENCY_THRESHOLD = 500;
 
 // ---------------- CUSTOM MOTOR SPEEDS ----------------
 // Forward
-const int LEFT_MOTOR_SPEED  = 70;
-const int RIGHT_MOTOR_SPEED = 100;
+const int LEFT_MOTOR_SPEED  = 80;
+const int RIGHT_MOTOR_SPEED = 110;
 
 // Reverse
-const int LEFT_REVERSE_SPEED  = 70;
-const int RIGHT_REVERSE_SPEED = 100;
+const int LEFT_REVERSE_SPEED  = 80;
+const int RIGHT_REVERSE_SPEED = 110;
 
 // Turn
-const int LEFT_TURN_SPEED  = 70;
-const int RIGHT_TURN_SPEED = 100;
+const int LEFT_TURN_SPEED  = 80;
+const int RIGHT_TURN_SPEED = 110;
 
 // ---------------- HELPER ----------------
 int clippedSpeed(int s) {
