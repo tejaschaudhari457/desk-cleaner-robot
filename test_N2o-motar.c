@@ -1,51 +1,40 @@
-// ===== MOTOR TEST CODE (FORWARD & BACKWARD ONLY) =====
+// ---------------- MOTOR PINS (L293D) ----------------
+const int IN1 = 5;     // Right Motor Forward
+const int IN2 = 6;     // Right Motor Backward
+const int IN3 = 9;     // Left Motor Forward
+const int IN4 = 10;    // Left Motor Backward
 
-// Motor pins
-const int IN1 = 5;   // Right Motor Forward
-const int IN2 = 6;   // Right Motor Backward
-const int IN3 = 9;   // Left Motor Forward
-const int IN4 = 10;  // Left Motor Backward
-
-const int SPEED = 120;   // Test speed (0–255)
+const int MOTOR_SPEED = 70;   // Testing speed
 
 void setup() {
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
-
-  stopMotors();
 }
 
 void loop() {
-  // FORWARD
-  forward();
-  delay(3000);
-
-  stopMotors();
-  delay(1500);
-
-  // BACKWARD
-  backward();
-  delay(3000);
-
-  stopMotors();
-  delay(2000);
-}
-
-// -------- Motor Control --------
-void forward() {
-  analogWrite(IN1, SPEED);
+  // -------- FORWARD --------
+  analogWrite(IN1, MOTOR_SPEED);   // Right forward
   analogWrite(IN2, 0);
-  analogWrite(IN3, SPEED);
+  analogWrite(IN3, MOTOR_SPEED);   // Left forward
   analogWrite(IN4, 0);
-}
+  delay(1000);
 
-void backward() {
+  // -------- STOP --------
+  stopMotors();
+  delay(1000);
+
+  // -------- BACKWARD --------
   analogWrite(IN1, 0);
-  analogWrite(IN2, SPEED);
+  analogWrite(IN2, MOTOR_SPEED);   // Right backward
   analogWrite(IN3, 0);
-  analogWrite(IN4, SPEED);
+  analogWrite(IN4, MOTOR_SPEED);   // Left backward
+  delay(1000);
+
+  // -------- STOP --------
+  stopMotors();
+  delay(1000);
 }
 
 void stopMotors() {
